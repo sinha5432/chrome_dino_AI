@@ -16,36 +16,50 @@ driver = webdriver.Firefox(executable_path=r'E:\geckodriver.exe')
 
 def open_game():
     canvas = driver.find_element_by_css_selector('.runner-canvas')
-    img = Image.open(BytesIO(canvas.screenshot_as_png))
-    img_arr = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    img = Image.open(BytesIO(canvas.screenshot_as_png)).convert('RGB')
 
-    return img_arr
+    img_array = np.array(img)
+
+    return img_array
 
 
 if __name__=='__main__':
     driver.get('https://chromedino.com/')
 
-    left_bound = np.array([107, 114])
-    right_bound = np.array([182, 162])
+    left_bound = np.array([117, 119])
+    right_bound = np.array([161, 211])
 
-    #last_time = time.time()
+    flag = 0
+    start_time = time.time()
 
     while True:
+        current_time = time.time()
+
         img = open_game()
-        crop_image = img[left_bound[0]:right_bound[0], left_bound[1]:right_bound[1]]
-        img = cv2.rectangle(img, (left_bound[0], left_bound[1]), (right_bound[0], right_bound[1]), (0,0,0), 1)
+        crop_image = img[left_bound[0]:right_bound[0], left_bound[1]:right_bound[1], :]
+        #print(img.shape)
+        img = cv2.rectangle(img, (left_bound[1], left_bound[0]), (right_bound[1], right_bound[0]), (0,0,0), 1)
         cv2.imshow('game', img)
         cv2.waitKey(1)
 
-        #top_image = crop_image[int(left_bound[1]/2):, :]
-        #bott_image = crop_image[:int(left_bound[1]/2), :]
+        top_image = crop_image[int(left_bound[0]/2):, :, :]
+        bott_image = crop_image[:int(left_bound[0]/2), :, :]
 
-        avg = np.average(crop_image)
+        avg = np.average(bott_image)
         print(avg)
-        if(avg<230):
-            driver.find_element_by_xpath("//html").send_keys(Keys.SPACE)
-            left_bound[0] = left_bound[0] + 3
-            right_bound[0] = right_bound[0] + 3
+
+        if(flag==1):
+            start_time = time.time()
+
+        if((current_time-start_time)>40):
+            left_bound[1] = left_bound[1] + 10
+            right_bound[1] = right_bound[1] + 10
+            start_time = time.time()
+
+        if(avg<235):
+            #driver.find_element_by_xpath("//html").send_keys(Keys.ARROW_UP)
+            keyboard.press(keyboard.KEY_UP)
+            flag = 1
 
         elif keyboard.is_pressed('alt'):
             break
