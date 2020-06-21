@@ -8,7 +8,7 @@ from io import BytesIO
 from selenium import webdriver
 from PIL import Image, ImageDraw
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.firefox.options import Options
+# from selenium.webdriver.firefox.options import Options
 
 # refresh button
 x1_r,y1_r = 357,97
@@ -38,8 +38,10 @@ if __name__=='__main__':
     try:
         driver.find_element_by_css_selector('.runner-canvas') #check if driver can get element
     except: # if error comes then get new driver and load page
+        options = Options()
+        options.headless = False
+        driver = webdriver.Firefox(options=options, executable_path=r'D:\Installers\geckodriver.exe')
 
-        driver = webdriver.Firefox(executable_path=r'D:\Installers\geckodriver.exe')
         driver.get('https://chromedino.com/')
         canvas = driver.find_element_by_css_selector('.runner-canvas')
         outer_body = driver.find_element_by_id('aswift_0_expand')
@@ -54,6 +56,9 @@ if __name__=='__main__':
     flag = 0
     factor = 1
     
+    cv2.namedWindow('dino game')        
+    cv2.moveWindow('dino game', 20, 20)   
+
     start()
     
     while True:
@@ -68,7 +73,7 @@ if __name__=='__main__':
         bott_image = crop_image[int(crop_image.shape[0]/2):, :, :]
         top_image = crop_image[:int(crop_image.shape[0]/2), :, :]
 
-        cv2.imshow('game', img_array)
+        cv2.imshow('dino game', img_array)
         cv2.waitKey(1)
 
         top_avg = np.average(top_image)
@@ -98,14 +103,13 @@ if __name__=='__main__':
         elif(bott_avg<235):#low jump
             print('low')
             canvas.click()
+
             keyboard.press(keyboard.KEY_UP)
             flag = 0
             
         elif(top_avg<227 and bott_avg>237): #duck
             t = threading.Thread(target=duck)
             t.start()
-            # t.join()
-
 
         if keyboard.is_pressed('alt'):
             cv2.destroyAllWindows()
