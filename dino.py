@@ -8,7 +8,7 @@ from io import BytesIO
 from selenium import webdriver
 from PIL import Image, ImageDraw
 from selenium.webdriver.common.keys import Keys
-# from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.action_chains import ActionChains
 
 # refresh button
 x1_r,y1_r = 357,97
@@ -33,22 +33,28 @@ def duck():
     keyboard.release(keyboard.KEY_DOWN)
 
 
-if __name__=='__main__':
-    
-    try:
-        driver.find_element_by_css_selector('.runner-canvas') #check if driver can get element
-    except: # if error comes then get new driver and load page
-        options = Options()
-        options.headless = False
-        driver = webdriver.Firefox(options=options, executable_path=r'D:\Installers\geckodriver.exe')
+def jump_higher():
 
-        driver.get('https://chromedino.com/')
-        canvas = driver.find_element_by_css_selector('.runner-canvas')
-        outer_body = driver.find_element_by_id('aswift_0_expand')
-        main_body = driver.find_element_by_xpath("//html")
-        print('page ready')
-        
-        
+    main_body.key_down(Keys.SPACE) #press down
+    time.sleep(0.2)
+    main_body.key_up(Keys.SPACE) 
+    
+    # ActionChains(driver) \
+    # .key_down(Keys.SPACE) \
+    # .pause(0.2) \
+    # .key_up(Keys.SPACE) \
+    # .perform()
+
+if __name__=='__main__':
+    cv2.namedWindow('dino game')        
+    cv2.moveWindow('dino game', 20, 20)   
+    
+    driver = webdriver.Firefox(executable_path=r'D:\Installers\geckodriver.exe')
+    driver.get('https://chromedino.com/')
+    canvas = driver.find_element_by_css_selector('.runner-canvas')
+    outer_body = driver.find_element_by_id('aswift_0_expand')
+    main_body = driver.find_element_by_xpath("//html")
+    
     left_bound = np.array([117, 110])
     right_bound = np.array([161, 202])
 
@@ -56,8 +62,6 @@ if __name__=='__main__':
     flag = 0
     factor = 1
     
-    cv2.namedWindow('dino game')        
-    cv2.moveWindow('dino game', 20, 20)   
 
     start()
     
@@ -73,8 +77,6 @@ if __name__=='__main__':
         bott_image = crop_image[int(crop_image.shape[0]/2):, :, :]
         top_image = crop_image[:int(crop_image.shape[0]/2), :, :]
 
-        cv2.imshow('dino game', img_array)
-        cv2.waitKey(1)
 
         top_avg = np.average(top_image)
         bott_avg = np.average(bott_image)
@@ -95,16 +97,15 @@ if __name__=='__main__':
             factor = 1
             start()
 
-        if(top_avg>227 and bott_avg<235):#high jump
-            print('high')
-            driver.find_element_by_xpath("//html").send_keys(Keys.ARROW_UP)
+        if(top_avg>227 and bott_avg<235):#low jump
+            print('low')
+            main_body.send_keys(Keys.SPACE)
             flag = 0
 
-        elif(bott_avg<235):#low jump
-            print('low')
-            canvas.click()
-
-            keyboard.press(keyboard.KEY_UP)
+        elif(bott_avg<235):#high jump
+            print('high')
+            t = threading.Thread(target=jump_higher)
+            t.start()
             flag = 0
             
         elif(top_avg<227 and bott_avg>237): #duck
@@ -115,3 +116,6 @@ if __name__=='__main__':
             cv2.destroyAllWindows()
             driver.close()
             break
+
+        cv2.imshow('dino game', img_array)
+        cv2.waitKey(1)
