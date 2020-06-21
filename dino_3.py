@@ -26,11 +26,12 @@ def open_game():
 if __name__=='__main__':
     driver.get('https://chromedino.com/')
 
-    left_bound = np.array([117, 119])
-    right_bound = np.array([161, 211])
+    left_bound = np.array([117, 110])
+    right_bound = np.array([161, 202])
 
     flag = 0
     start_time = time.time()
+
     factor = 1
 
     while True:
@@ -59,25 +60,31 @@ if __name__=='__main__':
         if(flag==1):
             start_time = time.time()
 
-        if((current_time-start_time)>30):
+        if(int(current_time-start_time)>30):
             left_bound[1] = left_bound[1] + int(factor*10)
             right_bound[1] = right_bound[1] + int(factor*10)
             start_time = time.time()
-            factor = factor + 0.15
+            factor = factor + 0.3
+            print('inside increment condn')
+
+        print(int(current_time-start_time))
 
         if(top_avg>227 and bott_avg<235):
             driver.find_element_by_xpath("//html").send_keys(Keys.ARROW_UP)
-            flag = 1
-            print('low jump!')
+            flag = 0
+            #print('low jump!')
+            #print("bott_avg = ", bott_avg)
+            #print("top_avg  = ", top_avg)
         elif(bott_avg<235):
             keyboard.press(keyboard.KEY_UP)
-            flag = 1
-            print('high jump!')
+            flag = 0
+            #print('high jump!')
         elif(top_avg<227 and bott_avg>237):
             keyboard.press(keyboard.KEY_DOWN)
-            print('Duck!')
-            print("bott_avg = ", bott_avg)
-            print("top_avg  = ", top_avg)
+            time.sleep(0.3)
+            keyboard.release(keyboard.KEY_DOWN)
+            #print('Duck!')
+
 
 
 
