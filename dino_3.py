@@ -31,35 +31,50 @@ if __name__=='__main__':
 
     flag = 0
     start_time = time.time()
+    factor = 1
 
     while True:
         current_time = time.time()
 
         img = open_game()
         crop_image = img[left_bound[0]:right_bound[0], left_bound[1]:right_bound[1], :]
-        #print(img.shape)
+
+
         img = cv2.rectangle(img, (left_bound[1], left_bound[0]), (right_bound[1], right_bound[0]), (0,0,0), 1)
-        cv2.imshow('game', img)
-        cv2.waitKey(1)
+        #print(img.shape[0])
 
-        top_image = crop_image[int(left_bound[0]/2):, :, :]
-        bott_image = crop_image[:int(left_bound[0]/2), :, :]
+        bott_image = crop_image[int(crop_image.shape[0]/2):, :, :]
+        top_image = crop_image[:int(crop_image.shape[0]/2), :, :]
 
-        avg = np.average(bott_image)
-        print(avg)
+        #print(bott_image.shape)
+
+        #cv2.imshow('game', img)
+        #cv2.waitKey(1)
+
+        top_avg = np.average(top_image)
+        bott_avg = np.average(bott_image)
+        #print("bott_avg = ",bott_avg)
+        print("top_avg  = ", top_avg)
 
         if(flag==1):
             start_time = time.time()
 
-        if((current_time-start_time)>40):
-            left_bound[1] = left_bound[1] + 10
-            right_bound[1] = right_bound[1] + 10
+        if((current_time-start_time)>30):
+            left_bound[1] = left_bound[1] + factor*15
+            right_bound[1] = right_bound[1] + factor*15
             start_time = time.time()
+            factor = factor + 0.2
 
-        if(avg<235):
-            #driver.find_element_by_xpath("//html").send_keys(Keys.ARROW_UP)
+        if(top_avg>227 and bott_avg<235):
+            driver.find_element_by_xpath("//html").send_keys(Keys.ARROW_UP)
+            flag = 1
+        elif(bott_avg<235):
             keyboard.press(keyboard.KEY_UP)
             flag = 1
+        elif(top_avg<230):
+            driver.find_element_by_xpath("//html").send_keys(Keys.ARROW_DOWN)
 
-        elif keyboard.is_pressed('alt'):
+
+
+        if keyboard.is_pressed('alt'):
             break
