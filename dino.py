@@ -34,16 +34,25 @@ def duck():
 
 
 def jump_higher():
+    keyboard.press(keyboard.KEY_UP)
 
-    main_body.key_down(Keys.SPACE) #press down
-    time.sleep(0.2)
-    main_body.key_up(Keys.SPACE) 
-    
+    # main_body.key_down(Keys.SPACE) #press down
+    # time.sleep(0.2)
+    # main_body.key_up(Keys.SPACE) 
+
     # ActionChains(driver) \
     # .key_down(Keys.SPACE) \
     # .pause(0.2) \
     # .key_up(Keys.SPACE) \
     # .perform()
+
+font                   = cv2.FONT_HERSHEY_SIMPLEX
+fontScale              = 2
+fontColor              = (0,0,0)
+lineType               = 2
+
+
+
 
 if __name__=='__main__':
     cv2.namedWindow('dino game')        
@@ -69,6 +78,8 @@ if __name__=='__main__':
         current_time = time.time()
 
         img,img_array = get_image()
+        (h, w) = img_array.shape[:2] #get image diamentions for putting text in center
+
         refbox   = np.sum(np.array(img.crop(ref_box)))
         crop_image = img_array[left_bound[0]:right_bound[0], left_bound[1]:right_bound[1], :]
 
@@ -89,26 +100,33 @@ if __name__=='__main__':
             right_bound[1] = right_bound[1] + int(factor*10)
             start_time = time.time()
             factor = factor + 0.3
+
+        text = None
             
         if refbox in range(431691,431950) :
-            print('refbox')
             start_time = time.time()
             flag = 0
             factor = 1
             start()
 
         if(top_avg>227 and bott_avg<235):#low jump
-            print('low')
+            text = 'low jump'
+            print(text)
             main_body.send_keys(Keys.SPACE)
             flag = 0
 
         elif(bott_avg<235):#high jump
-            print('high')
+            text = 'high jump'
+            print(text)
+
             t = threading.Thread(target=jump_higher)
             t.start()
             flag = 0
             
         elif(top_avg<227 and bott_avg>237): #duck
+            text = 'duck'
+            print(text)
+
             t = threading.Thread(target=duck)
             t.start()
 
@@ -116,6 +134,9 @@ if __name__=='__main__':
             cv2.destroyAllWindows()
             driver.close()
             break
+
+        if not text == None:
+            cv2.putText(img_array,text,((w//2) - 20,h//2), font, fontScale,fontColor,lineType)
 
         cv2.imshow('dino game', img_array)
         cv2.waitKey(1)
