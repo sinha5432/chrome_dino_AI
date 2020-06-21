@@ -3,9 +3,9 @@ import time
 import keyboard
 import threading
 import numpy as np
+from PIL import Image
 from io import BytesIO
 from selenium import webdriver
-from PIL import Image
 from selenium.webdriver.common.keys import Keys
 
 # refresh button
