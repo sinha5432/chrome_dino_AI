@@ -13,7 +13,11 @@ x1_r, y1_r = 357, 97
 x2_r, y2_r = 395, 130
 ref_box = (x1_r, y1_r, x2_r, y2_r)
 
-
+# text 
+font                   = cv2.FONT_HERSHEY_SIMPLEX
+fontScale              = 2
+fontColor              = (0,0,0)
+lineType               = 2
 
 def start():
     try:
@@ -21,12 +25,10 @@ def start():
     except:
         main_body.send_keys(Keys.SPACE)
 
-
 def get_image():
     img = Image.open(BytesIO(canvas.screenshot_as_png)).convert('RGB')
     img_array = np.array(img)
     return img, img_array
-
 
 def duck():
     keyboard.press(keyboard.KEY_DOWN)
@@ -34,21 +36,20 @@ def duck():
     keyboard.release(keyboard.KEY_DOWN)
     print('duck')
 
+def jump_higher():
+    keyboard.press(keyboard.KEY_UP)
 
 
-if __name__ == '__main__':
-
-    try:
-        driver.find_element_by_css_selector('.runner-canvas')  # check if driver can get element
-    except:  # if error comes then get new driver and load page
-
-        driver = webdriver.Firefox(executable_path=r'E:\geckodriver.exe')
-        driver.get('https://chromedino.com/')
-        canvas = driver.find_element_by_css_selector('.runner-canvas')
-        outer_body = driver.find_element_by_id('aswift_0_expand')
-        main_body = driver.find_element_by_xpath("//html")
-        print('page ready')
-
+if __name__=='__main__':
+    cv2.namedWindow('dino game')        
+    cv2.moveWindow('dino game', 20, 20)   
+    
+    driver = webdriver.Firefox(executable_path=r'D:\Installers\geckodriver.exe')
+    driver.get('https://chromedino.com/')
+    canvas = driver.find_element_by_css_selector('.runner-canvas')
+    outer_body = driver.find_element_by_id('aswift_0_expand')
+    main_body = driver.find_element_by_xpath("//html")
+    
     left_bound = np.array([117, 110])
     right_bound = np.array([161, 202])
 
@@ -61,8 +62,11 @@ if __name__ == '__main__':
     while True:
         current_time = time.time()
 
-        img, img_array = get_image()
-        refbox = np.sum(np.array(img.crop(ref_box)))
+        img,img_array = get_image()
+        (h, w) = img_array.shape[:2] #get image diamentions for putting text in center
+
+        refbox   = np.sum(np.array(img.crop(ref_box)))
+
         crop_image = img_array[left_bound[0]:right_bound[0], left_bound[1]:right_bound[1], :]
 
         img_array = cv2.rectangle(img_array, (left_bound[1], left_bound[0]), (right_bound[1], right_bound[0]),
@@ -71,8 +75,6 @@ if __name__ == '__main__':
         bott_image = crop_image[int(crop_image.shape[0] / 2):, :, :]
         top_image = crop_image[:int(crop_image.shape[0] / 2), :, :]
 
-        cv2.imshow('game', img_array)
-        cv2.waitKey(1)
 
         top_avg = np.average(top_image)
         bott_avg = np.average(bott_image)
@@ -92,32 +94,42 @@ if __name__ == '__main__':
             left_bound = np.array([117, 110])
             right_bound = np.array([161, 202])
 
+        text = None
+            
+        if refbox in range(431691,431950) :
             start_time = time.time()
             flag = 0
             factor = 1
             start()
 
-        if (top_avg > 225 and bott_avg < 235):  # low jump
-            driver.find_element_by_xpath("//html").send_keys(Keys.ARROW_UP)
-            flag = 0
-            print('low')
-            #print('top_avg  = ', top_avg)
-            #print('bott_avg = ', bott_avg)
-
-
-        elif (bott_avg < 235):  # high jump
-            print('high')
-
-            # canvas.click()
-            keyboard.press(keyboard.KEY_UP)
+        if(top_avg>227 and bott_avg<235):#low jump
+            text = 'low jump'
+            print(text)
+            main_body.send_keys(Keys.SPACE)
             flag = 0
 
-        elif (top_avg < 227 and bott_avg > 237):  # duck
+        elif(bott_avg<235):#high jump
+            text = 'high jump'
+            print(text)
+
+            t = threading.Thread(target=jump_higher)
+            t.start()
+            flag = 0
+            
+        elif(top_avg<227 and bott_avg>237): #duck
+            text = 'duck'
+            print(text)
+
             t = threading.Thread(target=duck)
             t.start()
-            # t.join()
 
         if keyboard.is_pressed('alt'):
             cv2.destroyAllWindows()
             driver.close()
             break
+
+        if not text == None:
+            cv2.putText(img_array,text,((w//2) - 20,h//2), font, fontScale,fontColor,lineType)
+
+        cv2.imshow('dino game', img_array)
+        cv2.waitKey(1)
