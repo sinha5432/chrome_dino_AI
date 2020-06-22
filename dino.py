@@ -47,8 +47,8 @@ def reset_variables():
     #  --------(x2,y2)  
     #          (202,161)
 
-    x1,y1 = 110, 117
-    x2,y2 = 202, 161
+    x1,y1 = 110-20, 117+3
+    x2,y2 = 202-40, 161
 
     factor = 1
     start_time = time()
@@ -92,7 +92,7 @@ def jump_higher():
 
 top_threshold    = 227 
 bottom_threshold = 235
-duck_top_offset  = 10
+duck_top_offset  = 5
 
 values = [top_threshold,bottom_threshold,duck_top_offset]
 
@@ -102,8 +102,10 @@ def status(top_box,bott_box,refresh_box,values):
         return boolean except for one case in duck.
     """
     # get averages for top and bott
-    top_avg  = np.average(top_box)
-    bott_avg = np.average(bott_box)
+    top_avg  = np.floor(np.average(top_box))
+    bott_avg = np.floor(np.average(bott_box))
+
+    print(top_avg,bott_avg)
 
     top_threshold,bottom_threshold,duck_top_offset = values
 
@@ -203,7 +205,7 @@ if __name__=='__main__':
         ## HIGH JUMP
         # else if upper half is triggered then perform high
         # jump. (tall cactus)
-        elif top_bool:
+        elif top_bool and bott_bool!=0:
             text = 'high jump'
             t = threading.Thread(target=jump_higher)
             t.start()
@@ -211,7 +213,7 @@ if __name__=='__main__':
         ## DUCK
         # if top box is triggered but bottom isn't
         # then duck. (partridge)
-        elif top_bool and bott_bool==1:
+        elif top_bool and bott_bool==0:
             text = 'duck'
             t = threading.Thread(target=duck)
             t.start()
