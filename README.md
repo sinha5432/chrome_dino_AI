@@ -1,2 +1,3 @@
-# Chrome Dino AI
-A bot that plays the chrome dino game for us because we aren't really good at it
+# chrome_dino_AI
+:robot: A bot which plays chrome dinosaur game
+
