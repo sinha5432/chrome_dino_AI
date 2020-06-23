@@ -1,2 +1,2 @@
-# chrome_dino_AI
-An fun project which plays dinosaur game in chrome
+# Chrome Dino AI
+A bot that plays the chrome dino game for us because we aren't really good at it
