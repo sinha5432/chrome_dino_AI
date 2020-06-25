@@ -26,7 +26,7 @@ X2,Y2 = 202 - 40, 161
 
 X1_R, Y1_R     = 357, 97
 X2_R, Y2_R     = 395, 130
-REF_BOX    = (X1_R, Y1_R, X2_R, Y2_R)
+REF_BOX        = (X1_R, Y1_R, X2_R, Y2_R)
 
 # text related stuff
 LINETYPE        = 2
@@ -37,14 +37,17 @@ FONT            = cv2.FONT_HERSHEY_SIMPLEX
 
 # threshold values for top and bottom box
 DUCK_TOP_OFFSET  = 5
-TOP_THRESHOLD    = 227 
-BOTTOM_THRESHOLD = 235
+TOP_THRESHOLD    = None # will be overwritten by get thershold 
+BOTTOM_THRESHOLD = None # will be overwritten by get thershold
 REF_BOX_RANGE    = range(431691,431950)
 DUCK_THRESHOLD   = BOTTOM_THRESHOLD+DUCK_TOP_OFFSET
 
 # video related stuff
 FRAMES = 50
 FOLDER = 'VIDOES'
+FOURCC = cv2.VideoWriter_fourcc(*'DIVX')
+FPS = 2
+
 
 # rectangle and shading related stuff
 COLOR = (0,0,0)
@@ -61,9 +64,9 @@ def reset_variables():
     cv2.namedWindow('dino game')        
     cv2.moveWindow('dino game', 20, 20)  
 
+    factor = 1
     x1,y1 = X1, Y1  
     x2,y2 = X2, Y2 
-    factor = 1
     start_time = factor_start_time = time()
     return x1, y1, x2, y2, start_time, factor, factor_start_time
 
@@ -73,7 +76,6 @@ def start():
         Trys to click on canvas. If this fails that
         means the game hasn't been started once. Thus
         it hits SPACE.
-
     """
     try:
         canvas.click()
@@ -150,10 +152,10 @@ def status(top_box,bott_box,refresh_box):
         return boolean except for one case in duck.
     """
     # get averages for top and bott
-    top_avg = np.floor(np.average(top_box))
+    top_avg  = np.floor(np.average(top_box))
     bott_avg = np.floor(np.average(bott_box))
 
-    top_bool = None
+    top_bool  = None
     bott_bool = None
 
 
@@ -203,9 +205,7 @@ def record_death(images):
     video_path = os.path.join(FOLDER,str(vid_num)+'.avi')
 
     shape = images[0].shape[1], images[0].shape[0]
-    fourcc = cv2.VideoWriter_fourcc(*'DIVX')
-    fps = 2
-    video = cv2.VideoWriter(video_path,fourcc,fps, shape)  
+    video = cv2.VideoWriter(video_path,FOURCC,FPS, shape)  
 
     for image in images: video.write(image)
     cv2.destroyAllWindows()  
@@ -214,13 +214,13 @@ def record_death(images):
 if __name__=='__main__':
 
     # get a driver and load website.
-    driver = webdriver.Firefox(executable_path=r'D:\Installers\geckodriver.exe')
+    driver = webdriver.Firefox(executable_path=r'') # D:\Installers\geckodriver.exe # E:\geckodriver.exe
     driver.get('https://chromedino.com/')
 
     # get elements on the page
-    main_body = driver.find_element_by_xpath("//html")
+    main_body  = driver.find_element_by_xpath("//html")
     outer_body = driver.find_element_by_id('aswift_0_expand')
-    canvas = driver.find_element_by_css_selector('.runner-canvas')
+    canvas     = driver.find_element_by_css_selector('.runner-canvas')
 
     x1, y1, x2, y2, start_time, factor, factor_start_time = reset_variables()
 
@@ -228,7 +228,6 @@ if __name__=='__main__':
 
     start()
 
-    # get threshold values and make them global
     get_threshold()
 
     while True:
@@ -327,7 +326,7 @@ if __name__=='__main__':
         # put coordinates of main box
         print(top_box.shape,bott_box.shape)
         mid_top_box_x  = x2 + top_box.shape[1]//2
-        mid_top_box_y  =  top_box.shape[0]//2
+        mid_top_box_y  =      top_box.shape[0]//2
 
         mid_bott_box_x = x2 + bott_box.shape[1]//2
         mid_bott_box_y = y2 - bott_box.shape[0]//2
