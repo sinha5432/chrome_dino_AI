@@ -197,7 +197,7 @@ def status(top_box, bott_box, refresh_box, values):
 
 if __name__ == '__main__':
     # get a driver and load website.
-    driver = webdriver.Firefox(executable_path=r'E:\geckodriver.exe')
+    driver = webdriver.Firefox(executable_path=r'D:\Installers\geckodriver.exe')
     driver.get('https://chromedino.com/')
 
     # get elements on the page
