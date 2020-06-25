@@ -1,4 +1,6 @@
+import os
 import cv2
+import shutil
 import keyboard
 import threading
 import numpy as np
@@ -8,6 +10,11 @@ from time import time,sleep
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 
+# main box coordinates
+X1,Y1 = 110-20, 117+3  
+X2,Y2 = 202-40, 161 ##### nerfed on purpose for dubugging . remove later.
+
+# refresh button coordinates
 
 # (357,97)
 #  (x1,y1) -------
@@ -17,38 +24,112 @@ from selenium.webdriver.common.keys import Keys
 #  ---------(x2,y2)  
 #          (395,130)
 
-# refresh button coordinates
-x1_r, y1_r = 357, 97
-x2_r, y2_r = 395, 130
-ref_box    = (x1_r, y1_r, x2_r, y2_r)
+X1_R, Y1_R     = 357, 97
+X2_R, Y2_R     = 395, 130
+REF_BOX    = (X1_R, Y1_R, X2_R, Y2_R)
 
-# text 
-fontScale  = 2
-lineType   = 2
-fontColor  = (0,0,0)
-font       = cv2.FONT_HERSHEY_SIMPLEX
+# text related stuff
+LINETYPE        = 2
+FONTSCALE_LARGE = 2
+FONTSCALE_SMALL = 0.4
+FONTCOLOR       = (0,0,0)
+FONT            = cv2.FONT_HERSHEY_SIMPLEX
+
 
 # threshold values for top and bottom box
-max_value = 227
-min_value = 235
-duck_thershold = 2
+DUCK_TOP_OFFSET  = 5
+TOP_THRESHOLD    = 227 
+BOTTOM_THRESHOLD = 235
+REF_BOX_RANGE    = range(431691,431950)
+DUCK_THRESHOLD   = BOTTOM_THRESHOLD+DUCK_TOP_OFFSET
+
+# video related stuff
+FRAMES = 50
+FOLDER = 'VIDOES'
+
+# rectangle and shading related stuff
+COLOR = (0,0,0)
+BODER_WIDTH = 1
+
+
+# X1,Y1,X2,Y2 = 90, 120, 162, 161
+# def print_box():
+#     def foo(a,b):
+#         if a<b: return ((b-a)//2)+a
+#         else  : return ((a-b)//2)+b
+
+#     center_line = foo(X1,X2),foo(Y1,Y2)
+#     tc  = foo(X1,center_line[0]),foo(Y1,center_line[1])
+#     bc = foo(X2,center_line[0]),foo(Y2,center_line[1])
+    
+#     string = f"""
+#            Main box 
+
+#      {(X1,Y1)}
+#      (x1,y1) ------------
+#      |                  |
+#      |     Top box      |  
+#       |    {tc}    |
+#      |                  |
+#      |------------------| {center_line}
+#      |                  |
+#      |    Bottom box    |  
+#      |    {   bc   }    |
+#      |                  |
+#      -------------(x2,y2)  
+#                 {(X2,Y2)}
+#              """
+#     columns = shutil.get_terminal_size().columns
+#     print("\n".join(line.center(columns)  for line in string.split("\n"))) # MULTI LINE STRING WITH NEW LINES
+# print_box()
+
+# def print_box():
+#     def foo(a,b):
+#         if a<b:
+#             return ((b-a)//2)+a
+#         else:
+#             return ((a-b)//2)+b
+
+
+#     center_line = foo(X1,X2),foo(Y1,Y2)
+#     tc  = foo(X1,center_line[0]),foo(Y1,center_line[1])
+#     bc = foo(X2,center_line[0]),foo(Y2,center_line[1])
+    
+#     string = f"""
+#            Main box 
+
+#      {(X1,Y1)}
+#      (x1,y1) ------------
+#      |                  |
+#      |     Top box      |  
+#      |    {   tc   }    |
+#      |                  |
+#      |------------------| {center_line}
+#      |                  |
+#      |    Bottom box    |  
+#      |    {   bc   }    |
+#      |                  |
+#      -------------(x2,y2)  
+#                 {(X2,Y2)}
+#              """
+#     columns = shutil.get_terminal_size().columns
+#     print(columns)
+#     print(string.center(columns))
+
+# print_box()
 
 def reset_variables():
     """
         resets variables on game start/when 
         refresh is triggered.
     """
+    # create a cv2 window 
+    cv2.destroyAllWindows()
+    cv2.namedWindow('dino game')        
+    cv2.moveWindow('dino game', 20, 20)  
 
-    # (110,117)
-    #  (x1,y1) ------
-    #  |            |
-    #  |  Main box  |
-    #  |            |
-    #  --------(x2,y2)  
-    #          (202,161)
-
-    x1,y1 = 110-20, 117+3
-    x2,y2 = 202-40, 161
+    x1,y1 = X1, Y1  
+    x2,y2 = X2, Y2 
 
     factor = 1
     start_time = time()
@@ -89,14 +170,7 @@ def jump_higher():
     """
     keyboard.press(keyboard.KEY_UP)
 
-
-top_threshold    = 227 
-bottom_threshold = 235
-duck_top_offset  = 5
-
-values = [top_threshold,bottom_threshold,duck_top_offset]
-
-def status(top_box,bott_box,refresh_box,values):
+def status(top_box,bott_box,refresh_box):
     """
         returns wheather boxes are triggered or not.
         return boolean except for one case in duck.
@@ -105,9 +179,7 @@ def status(top_box,bott_box,refresh_box,values):
     top_avg  = np.floor(np.average(top_box))
     bott_avg = np.floor(np.average(bott_box))
 
-    print(top_avg,bott_avg)
-
-    top_threshold,bottom_threshold,duck_top_offset = values
+    # if VERBOSITY == 2:print(top_avg,bott_avg)
 
     top_bool  = None
     bott_bool = None
@@ -117,31 +189,60 @@ def status(top_box,bott_box,refresh_box,values):
     # and check if they fall in a range. return True
     # if they do, else false
     refbox = np.sum(refresh_box)
-    if refbox in range(431691,431950): r_bool = True
-    else                             : r_bool = False
+    if refbox in REF_BOX_RANGE: r_bool = True
+    else                      : r_bool = False
     
     ## TOP BOX
-    # if it crosses max_value then flase 
-    # elif if falls below min_value then true
+    # if it crosses TOP_THRESHOLD then flase 
+    # elif if falls below TOP_THRESHOLD then true
     # else None       
-    if   top_avg > top_threshold : top_bool = False
-    elif top_avg < top_threshold : top_bool = True
+    if   top_avg > TOP_THRESHOLD : top_bool = False
+    elif top_avg < TOP_THRESHOLD : top_bool = True
 
     ## BOTTOM BOX
-    # similar to top box but here duck_top_offset is a 
+    # similar to top box but here DUCK_TOP_OFFSET is a 
     # work-around to some problems faced in ducking during 
     # testing
-    new_threshold = bottom_threshold+duck_top_offset
-    if   bott_avg > new_threshold    : bott_box  = 0
-    elif bott_avg > bottom_threshold : bott_bool = False
-    elif bott_avg < bottom_threshold : bott_bool = True
+    if   bott_avg > DUCK_THRESHOLD   : bott_box  = 0
+    elif bott_avg > BOTTOM_THRESHOLD : bott_bool = False
+    elif bott_avg < BOTTOM_THRESHOLD : bott_bool = True
 
-    return top_bool,bott_bool,r_bool
+    return top_bool,bott_bool,r_bool,top_avg,bott_avg
+
+def append(images,img_array):
+    """
+        appends images in a list until it 
+        crosses a limited number (FRAMES). Then 
+        starts to pop before appending.
+    """
+    if len(images) > FRAMES:
+        images.pop(0)
+    images.append(img_array)
+
+    return images
+
+def record_death(images):
+    """
+        converts stored images to a video and saves it
+    """
+    if not os.path.exists(FOLDER):
+        os.mkdir(FOLDER)
+
+    vid_num = len(os.listdir(FOLDER)) + 1
+    video_path = os.path.join(FOLDER,str(vid_num)+'.avi')
+
+    shape = images[0].shape[1], images[0].shape[0]
+    fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+    fps = 2
+    video = cv2.VideoWriter(video_path,fourcc,fps, shape)  
+
+    for image in images:  
+        video.write(image)
+
+    cv2.destroyAllWindows()  
+    video.release()  
 
 if __name__=='__main__':
-    # create a cv2 window 
-    cv2.namedWindow('dino game')        
-    cv2.moveWindow('dino game', 20, 20)   
     
     # get a driver and load website.
     driver = webdriver.Firefox(executable_path=r'D:\Installers\geckodriver.exe')
@@ -154,6 +255,8 @@ if __name__=='__main__':
 
     x1,y1,x2,y2,start_time,factor = reset_variables()
 
+    images = []
+
     start()
 
     while True:
@@ -161,11 +264,12 @@ if __name__=='__main__':
         img,img_array = get_image()
 
         # get all boxes 
-        main_box    = img_array[ y1:y2,x1:x2,:]
+        main_box    = img_array[y1:y2,x1:x2,:]
         mid         = main_box.shape[0] // 2
+        print(mid)
         top_box     = main_box[:mid, :, :]
         bott_box    = main_box[mid:, :, :]
-        refresh_box = np.array(img.crop(ref_box))
+        refresh_box = np.array(img.crop(REF_BOX))
 
         # increment 
         if int(time() - start_time) > 15:
@@ -181,17 +285,21 @@ if __name__=='__main__':
 
         
         # get status
-        top_bool,bott_bool,r_bool = status(top_box,bott_box,
-                                            refresh_box,
-                                            values)
+        top_bool,bott_bool,r_bool,top_avg,bott_avg = status(top_box,bott_box,
+                                                            refresh_box)
 
         text = None
+
+        images = append(images,img_array)
 
         ## REFRESH BUTTON
         # if r_bool is true then reset variables
         # and start again. (game ended)
         if r_bool:
             text = "restart"
+            t = threading.Thread(target=record_death,args=(images,)) #don't remove this comma after images
+            t.start()
+            t.join()
             x1,y1,x2,y2,start_time,factor = reset_variables()
             start()
 
@@ -226,25 +334,47 @@ if __name__=='__main__':
             driver.close()
             break
 
-
         ## CV2 PART:
 
         #get image diamentions
         (h, w) = img_array.shape[:2] 
 
         # draw rectangle
-        img_array = cv2.rectangle(img_array,(x1, y1),(x2, y2),(0, 0, 0), 1)
+        img_array = cv2.rectangle(img_array,(x1, y1),(x2, y2),
+                                 COLOR, BODER_WIDTH)
+
+        if top_bool:
+            mask = np.full(top_box.shape, 50, np.uint8)
+            main_box[:mid, :, :] = cv2.addWeighted(top_box, 0.5, mask, 0.5, 1.0)
+            img_array[y1:y2,x1:x2,:] = main_box
+
+
+        if bott_bool:
+            mask = np.full(bott_box.shape, 50, np.uint8)
+            main_box[mid:, :, :] = cv2.addWeighted(bott_box, 0.5, mask, 0.5, 1.0)
+            img_array[y1:y2,x1:x2,:] = main_box
 
         # put text if not none.
         if not text == None:
-            cv2.putText(img_array,text,((w//2) - len(text)*20,h//2), font, fontScale,fontColor,lineType)
+            cv2.putText(img_array,text,((w//2) - len(text)*20,h//2),
+                         FONT, FONTSCALE_LARGE,FONTCOLOR,LINETYPE)
 
         # put coordinates of main box
-        cv2.putText(img_array,str(f"({x1},{y1})"),(x1,y1),
-                                 font, 0.4,fontColor,lineType)
+        print(top_box.shape,bott_box.shape)
+        mid_top_box_x  = x2 + top_box.shape[1]//2
+        mid_top_box_y  =  top_box.shape[0]//2
 
-        cv2.putText(img_array,str(f"({x2},{y2})"),(x2,y2),
-                                 font, 0.4,fontColor,lineType)
+        mid_bott_box_x = x2 + bott_box.shape[1]//2
+        mid_bott_box_y = y2 - bott_box.shape[0]//2
+
+        print(mid_top_box_x,mid_top_box_y,mid_bott_box_x,mid_bott_box_y)
+
+        cv2.putText(img_array,str(f"{top_avg}"),(mid_top_box_x,mid_top_box_y),
+                                 FONT, FONTSCALE_SMALL,FONTCOLOR,LINETYPE)
+
+        cv2.putText(img_array,str(f"{bott_avg}"),(mid_bott_box_x,mid_bott_box_y),
+                                 FONT, FONTSCALE_SMALL,FONTCOLOR,LINETYPE)
+
 
         # show image and refresh every 1ms
         cv2.imshow('dino game', img_array)
