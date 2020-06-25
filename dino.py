@@ -37,16 +37,16 @@ FONT            = cv2.FONT_HERSHEY_SIMPLEX
 
 # threshold values for top and bottom box
 DUCK_TOP_OFFSET  = 5
-TOP_THRESHOLD    = None # will be overwritten by get thershold 
-BOTTOM_THRESHOLD = None # will be overwritten by get thershold
+TOP_THRESHOLD    = 0 # will be overwritten by get thershold 
+BOTTOM_THRESHOLD = 0 # will be overwritten by get thershold
 REF_BOX_RANGE    = range(431691,431950)
 DUCK_THRESHOLD   = BOTTOM_THRESHOLD+DUCK_TOP_OFFSET
 
 # video related stuff
+FPS = 2
 FRAMES = 50
 FOLDER = 'VIDOES'
 FOURCC = cv2.VideoWriter_fourcc(*'DIVX')
-FPS = 2
 
 
 # rectangle and shading related stuff
@@ -67,8 +67,8 @@ def reset_variables():
     factor = 1
     x1,y1 = X1, Y1  
     x2,y2 = X2, Y2 
-    start_time = factor_start_time = time()
-    return x1, y1, x2, y2, start_time, factor, factor_start_time
+    start_time = factor_start_time = start_time_copy = time()
+    return x1, y1, x2, y2, start_time, factor, factor_start_time,start_time_copy
 
 
 def start():
@@ -89,8 +89,8 @@ def get_image():
         numpy array representation.
     """
     img = Image.open(BytesIO(canvas.screenshot_as_png)).convert('RGB')
-    img_array = np.array(img)
-    return img, img_array
+    image_array = np.array(img)
+    return img, image_array
 
 
 def duck():
@@ -114,12 +114,12 @@ def get_boxes(img,image_array):
         crop and return all boxes
         as numpy arrays
     """
-    main_box    = img_array[y1:y2,x1:x2,:]
+    main_box    = image_array[y1:y2,x1:x2,:]
     mid         = main_box.shape[0] // 2
     top_box     = main_box[:mid, :, :]
     bott_box    = main_box[mid:, :, :]
     refresh_box = np.array(img.crop(REF_BOX))
-    return main_box,top_box,bott_box,refresh_box
+    return main_box,mid,top_box,bott_box,refresh_box
 
 def get_threshold():
     '''
@@ -131,8 +131,8 @@ def get_threshold():
     intial_time     = time()
 
     while (time()-intial_time) < 3:
-        img, img_array = get_image()
-        main_box,top_box,bott_box,refresh_box = get_boxes(img,image_array)
+        img, image_array = get_image()
+        main_box,mid,top_box,bott_box,refresh_box = get_boxes(img,image_array)
 
         top_avg  = np.floor(np.average(top_box))
         bott_avg = np.floor(np.average(bott_box))
@@ -140,10 +140,12 @@ def get_threshold():
         top_values.append(top_avg)
         bottom_values.append(bott_avg)
 
-    TOP_THRESHOLD    = np.average(top_values)    - 20
-    BOTTOM_THRESHOLD = np.average(bottom_values) - 5
+    TOP_THRESHOLD    = np.floor(np.average(top_values))     
+    BOTTOM_THRESHOLD = np.floor(np.average(bottom_values)) 
+
     print('top threshold = ', TOP_THRESHOLD)
     print('bottom threshold = ', BOTTOM_THRESHOLD)
+    return TOP_THRESHOLD,BOTTOM_THRESHOLD
 
 
 def status(top_box,bott_box,refresh_box):
@@ -158,6 +160,7 @@ def status(top_box,bott_box,refresh_box):
     top_bool  = None
     bott_bool = None
 
+    print(bott_avg)
 
     ## REFRESH BOX
     # get the sum of pixel values for refresh box
@@ -184,14 +187,14 @@ def status(top_box,bott_box,refresh_box):
 
     return top_bool,bott_bool,r_bool,top_avg,bott_avg
 
-def append_images(images,img_array):
+def append_images(images,image_array):
     """
         appends images in a list until it 
         crosses a limited number (FRAMES). Then 
         starts to pop before appending.
     """
     if len(images) > FRAMES: images.pop(0)
-    images.append(img_array)
+    images.append(image_array)
 
     return images
 
@@ -214,7 +217,7 @@ def record_death(images):
 if __name__=='__main__':
 
     # get a driver and load website.
-    driver = webdriver.Firefox(executable_path=r'') # D:\Installers\geckodriver.exe # E:\geckodriver.exe
+    driver = webdriver.Firefox(executable_path=r'D:\Installers\geckodriver.exe') # D:\Installers\geckodriver.exe # E:\geckodriver.exe
     driver.get('https://chromedino.com/')
 
     # get elements on the page
@@ -222,28 +225,26 @@ if __name__=='__main__':
     outer_body = driver.find_element_by_id('aswift_0_expand')
     canvas     = driver.find_element_by_css_selector('.runner-canvas')
 
-    x1, y1, x2, y2, start_time, factor, factor_start_time = reset_variables()
+    x1, y1, x2, y2, start_time, factor, factor_start_time,start_time_copy = reset_variables()
 
     images = []
 
     start()
 
-    get_threshold()
+    TOP_THRESHOLD,BOTTOM_THRESHOLD = get_threshold()
 
     while True:
 
-        img, img_array = get_image()
-        main_box,top_box,bott_box,refresh_box = get_boxes(img, img_array)
+        img, image_array = get_image()
+        main_box,mid,top_box,bott_box,refresh_box = get_boxes(img, image_array)
 
-        # increment
-        if int(time() - start_time) > 15 and time() - end_time < 120:
+        # increment x1 and x2
+        if int(time() - start_time) > 15 and time() - start_time_copy < 120:
             x1 += int(factor * 20)
             x2 += int(factor * 20)
-
             start_time = time()
-            #print('shifting', x1, x2)
 
-        if int(time() - factor_start_time) > 30 and time() - end_time < 150:
+        if int(time() - factor_start_time) > 30 and time() - start_time_copy < 150:
             factor += 0.1
             factor_start_time = time()
 
@@ -252,7 +253,7 @@ if __name__=='__main__':
                                                             refresh_box)
         text = None
 
-        images = append_images(images,img_array)
+        images = append_images(images,image_array)
 
         ## REFRESH BUTTON
         # if r_bool is true then reset variables
@@ -263,22 +264,24 @@ if __name__=='__main__':
             t.start()
             t.join()
 
-            x1, y1, x2, y2, start_time, factor, factor_start_time = reset_variables()
+            x1, y1, x2, y2, start_time, factor, factor_start_time,start_time_copy = reset_variables()
             start()
-            get_threshold()
+            TOP_THRESHOLD,BOTTOM_THRESHOLD = get_threshold()
 
         ## LOW JUMP
         # if botton box is triggered but top one isn't
         # then perform low jump. (small cactus)
         if bott_bool and not top_bool:
-            print('bottom_box')
+            text = "low jump"
+            # print('bottom_box')
             main_body.send_keys(Keys.SPACE)
 
         ## HIGH JUMP
         # else if upper half is triggered then perform high
         # jump. (tall cactus)
         elif top_bool and bott_bool!=0:
-            print('both_box')
+            text = "high jump"
+            # print('both_box')
             t = threading.Thread(target=jump_higher)
             t.start()
 
@@ -286,7 +289,8 @@ if __name__=='__main__':
         # if top box is triggered but bottom isn't
         # then duck. (Archaeopteryx)
         elif top_bool:
-            print('top_box')
+            text = "duck"
+            # print('top_box')
             t = threading.Thread(target=duck)
             t.start()
 
@@ -301,45 +305,36 @@ if __name__=='__main__':
         ## CV2 PART:
 
         #get image diamentions
-        (h, w) = img_array.shape[:2] 
+        (h, w) = image_array.shape[:2] 
 
         # draw rectangle
-        img_array = cv2.rectangle(img_array,(x1, y1),(x2, y2),
+        image_array = cv2.rectangle(image_array,(x1, y1),(x2, y2),
                                  COLOR, BODER_WIDTH)
 
         if top_bool:
             mask = np.full(top_box.shape, 50, np.uint8)
             main_box[:mid, :, :] = cv2.addWeighted(top_box, 0.5, mask, 0.5, 1.0)
-            img_array[y1:y2,x1:x2,:] = main_box
+            image_array[y1:y2,x1:x2,:] = main_box
 
 
         if bott_bool:
             mask = np.full(bott_box.shape, 50, np.uint8)
             main_box[mid:, :, :] = cv2.addWeighted(bott_box, 0.5, mask, 0.5, 1.0)
-            img_array[y1:y2,x1:x2,:] = main_box
+            image_array[y1:y2,x1:x2,:] = main_box
 
         # put text if not none.
         if not text == None:
-            cv2.putText(img_array,text,((w//2) - len(text)*20,h//2),
+            cv2.putText(image_array,text,((w//2) - len(text)*20,h//2),
                          FONT, FONTSCALE_LARGE,FONTCOLOR,LINETYPE)
 
-        # put coordinates of main box
-        print(top_box.shape,bott_box.shape)
-        mid_top_box_x  = x2 + top_box.shape[1]//2
-        mid_top_box_y  =      top_box.shape[0]//2
 
-        mid_bott_box_x = x2 + bott_box.shape[1]//2
-        mid_bott_box_y = y2 - bott_box.shape[0]//2
-
-        print(mid_top_box_x,mid_top_box_y,mid_bott_box_x,mid_bott_box_y)
-
-        cv2.putText(img_array,str(f"{top_avg}"),(mid_top_box_x,mid_top_box_y),
+        cv2.putText(image_array,str(f"{top_avg} | {TOP_THRESHOLD}"),(x2,y1),
                                  FONT, FONTSCALE_SMALL,FONTCOLOR,LINETYPE)
 
-        cv2.putText(img_array,str(f"{bott_avg}"),(mid_bott_box_x,mid_bott_box_y),
+        cv2.putText(image_array,str(f"{bott_avg} | {BOTTOM_THRESHOLD}"),(x2,y2),
                                  FONT, FONTSCALE_SMALL,FONTCOLOR,LINETYPE)
 
 
         # show image and refresh every 1ms
-        cv2.imshow('dino game', img_array)
+        cv2.imshow('dino game', image_array)
         cv2.waitKey(1)
