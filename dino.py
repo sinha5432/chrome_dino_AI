@@ -4,6 +4,7 @@ import shutil
 import keyboard
 import threading
 import numpy as np
+import pyautogui
 from PIL import Image
 from io import BytesIO
 from time import time, sleep
@@ -43,8 +44,8 @@ REF_BOX_RANGE = range(431691, 431950)
 
 
 # video related stuff
-FPS = 2
-FRAMES = 50
+FPS = 4
+FRAMES = 100
 FOLDER = 'VIDOES'
 FOURCC = cv2.VideoWriter_fourcc(*'DIVX')
 
@@ -101,11 +102,20 @@ def duck():
     keyboard.release(keyboard.KEY_DOWN)
 
 
+    
+
+
 def jump_higher():
     """
         performs a higher jump than `main_body.send_keys(Keys.SPACE)`
     """
     keyboard.press(keyboard.KEY_UP)
+
+def low_jump():
+    main_body.send_keys(Keys.SPACE)
+
+   
+
 
 
 def get_boxes(img, image_array):
@@ -114,7 +124,7 @@ def get_boxes(img, image_array):
         as numpy arrays
     """
     main_box = image_array[y1:y2, x1:x2, :]
-    mid = main_box.shape[0] // 2
+    mid = main_box.shape[0] // 2 - 7
     top_box = main_box[:mid, :, :]
     bott_box = main_box[mid:, :, :]
     refresh_box = np.array(img.crop(REF_BOX))
@@ -138,7 +148,7 @@ def get_threshold():
         bottom_values = np.append(bottom_values, bott_box)
 
     TOP_THRESHOLD = np.floor(np.average(top_values)) - 5
-    BOTTOM_THRESHOLD = np.floor(np.average(bottom_values)) - 5
+    BOTTOM_THRESHOLD = np.floor(np.average(bottom_values)) - 10
 
     print('top threshold = ', TOP_THRESHOLD)
     print('bottom threshold = ', BOTTOM_THRESHOLD)
@@ -190,7 +200,7 @@ def status(top_box, bott_box, refresh_box):
     elif bott_avg < BOTTOM_THRESHOLD:
         bott_bool = True
 
-    print(bott_bool)
+    #print(bott_bool)
 
     return top_bool, bott_bool, r_bool, top_avg, bott_avg
 
@@ -251,11 +261,11 @@ if __name__ == '__main__':
 
         # increment x1 and x2
         if int(time() - start_time) > 15 and (time() - start_time_copy) < 120:
-            x1 += int(factor * 20)
-            x2 += int(factor * 20)
+            x1 += int(factor * 5)
+            x2 += int(factor * 15)
             start_time = time()
 
-        if int(time() - factor_start_time) > 30 and (time() - start_time_copy) < 150:
+        if int(time() - factor_start_time) > 30 and (time() - start_time_copy) < 120:
             factor += 0.1
             factor_start_time = time()
 
@@ -284,8 +294,11 @@ if __name__ == '__main__':
         # then perform low jump. (small cactus)
         if bott_bool and not top_bool:
             text = "low jump"
-            print('bottom_box')
-            main_body.send_keys(Keys.SPACE)
+            #print('bottom_box')
+            t = threading.Thread(target=low_jump)
+            t.start()
+           
+
 
         ## HIGH JUMP
         # else if upper half is triggered then perform high
