@@ -109,13 +109,8 @@ def jump_higher():
     """
         performs a higher jump than `main_body.send_keys(Keys.SPACE)`
     """
-    # keyboard.press(keyboard.KEY_UP)
-    # WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.CSS_SELECTOR, "canvas.runner-canvas")))
-    # ActionChains(driver).key_down(Keys.SPACE).pause(0.2).key_up(Keys.SPACE).perform()
-
     driver.execute_script('''
     var keydownEvt = new KeyboardEvent('keydown', {
-        altKey:false,
         altKey: false,
         bubbles: true,
         cancelBubble: false,
