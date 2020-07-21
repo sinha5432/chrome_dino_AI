@@ -10,6 +10,10 @@ from time import time, sleep
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 # main box coordinates
 X1, Y1 = 110 - 30, 117
 X2, Y2 = 202 - 40, 161
@@ -105,7 +109,40 @@ def jump_higher():
     """
         performs a higher jump than `main_body.send_keys(Keys.SPACE)`
     """
-    keyboard.press(keyboard.KEY_UP)
+    # keyboard.press(keyboard.KEY_UP)
+    # WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.CSS_SELECTOR, "canvas.runner-canvas")))
+    # ActionChains(driver).key_down(Keys.SPACE).pause(0.2).key_up(Keys.SPACE).perform()
+
+    driver.execute_script('''
+    var keydownEvt = new KeyboardEvent('keydown', {
+        altKey:false,
+        altKey: false,
+        bubbles: true,
+        cancelBubble: false,
+        cancelable: true,
+        charCode: 0,
+        code: "Space",
+        composed: true,
+        ctrlKey: false,
+        currentTarget: null,
+        defaultPrevented: true,
+        detail: 0,
+        eventPhase: 0,
+        isComposing: false,
+        isTrusted: true,
+        key: " ",
+        keyCode: 32,
+        location: 0,
+        metaKey: false,
+        repeat: false,
+        returnValue: false,
+        shiftKey: false,
+        type: "keydown",
+        which: 32,
+    });
+    arguments[0].dispatchEvent(keydownEvt);
+    ''', canvas)
+
 
 
 def get_boxes(img, image_array):
@@ -228,7 +265,7 @@ if __name__ == '__main__':
 
     # get a driver and load website.
     driver = webdriver.Firefox(
-        executable_path=r'E:\geckodriver.exe')  # D:\Installers\geckodriver.exe # E:\geckodriver.exe
+        executable_path=r'D:\geckodriver.exe')  # D:\geckodriver.exe # E:\geckodriver.exe
     driver.get('https://chromedino.com/')
 
     # get elements on the page
